@@ -1,46 +1,45 @@
 import torch as tc
 
-## need to adapt this to the lm use-case still.
+
 class Runner:
-    def __init__(self, max_epochs, verbose=True):
-        self.max_epochs = max_epochs
+    def __init__(self, verbose=True):
         self.verbose = verbose
 
-    # this needs to be fixed up further to deal with variable length of the sequences
-    # and the fact that the padding should not be counted in the loss.
+    # this needs to be fixed up further to deal with
+    # the fact that the padding should not be counted in the loss.
     def train_epoch(self, model, train_dataloader, optimizer, device, criterion):
-        for batch_idx, (X, Y) in enumerate(train_dataloader, 1):
-            X, Y = X.to(device), Y.to(device)
+        for batch_idx, (X, Y, L) in enumerate(train_dataloader, 1):
+            X, Y, L = X.to(device), Y.to(device), L.to(device)
 
             # Forward
-            logits = model(X)
-            loss = criterion(logits.view(-1, model.vocab_size), Y.view(-1, model.vocab_size))
+            logprobs, _ = model(X, L)
+            loss = criterion(logprobs.reshape(-1, model.vocab_size), Y.reshape(-1))
 
             # Backprop
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-            if self.verbose and batch_idx % 100 == 0:
+            if self.verbose: # and batch_idx % 100 == 0:
                 loss = loss.item()
                 print("batch: {}... loss: {}".format(batch_idx, loss))
 
         return
 
-    # this needs to be fixed up further to deal with variable length of the sequences
-    # and the fact that the padding should not be counted in the loss/other metrics.
+    # this needs to be fixed up further to deal with
+    # the fact that the padding should not be counted in the loss/other metrics.
     def evaluate_epoch(self, model, dataloader, device, criterion):
         num_test_tokens = 0
         test_loss, correct = 0, 0
         with tc.no_grad():
-            for X, Y in dataloader:
-                X, Y = X.to(device), Y.to(device)
+            for X, Y, L in dataloader:
+                X, Y, L = X.to(device), Y.to(device), L.to(device)
 
-                logits = model(X)
-                loss = criterion(logits.view(-1, model.vocab_size), Y.view(-1, model.vocab_size))
+                logprobs, _ = model(X, L)
+                loss = criterion(logprobs.reshape(-1, model.vocab_size), Y.reshape(-1))
 
                 test_loss += X.shape[0] * X.shape[1] * loss.item()
-                correct += (logits.argmax(1) == Y).type(tc.float).sum().item()
+                correct += (logprobs.argmax(-1) == Y).type(tc.float).sum().item()
                 num_test_tokens += X.shape[0] * X.shape[1]
 
         test_loss /= num_test_tokens
@@ -50,10 +49,8 @@ class Runner:
             "loss": test_loss
         }
 
-    def run(self, model, train_dataloader, test_dataloader, device, criterion, optimizer):
-        print('running!!')
-
-        for epoch in range(1, self.max_epochs+1):
+    def train(self, epochs, model, train_dataloader, test_dataloader, device, criterion, optimizer):
+        for epoch in range(1, epochs+1):
             if self.verbose:
                 print(f"Epoch {epoch}\n-------------------------------")
 
@@ -70,3 +67,6 @@ class Runner:
             if epoch % 10 == 0:
                 tc.save(model.state_dict(), "model.pth")
                 tc.save(optimizer.state_dict(), "optimizer.pth")
+
+    def generate(self, generate_lines):
+        raise NotImplementedError

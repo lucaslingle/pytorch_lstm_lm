@@ -1,3 +1,4 @@
+import argparse
 import torch as tc
 import torchtext as tt
 from utils import get_tokenizer, get_vocab, text_pipeline, lstm_preprocess_pipeline, ProcessedIterableDataset
@@ -5,13 +6,18 @@ from functools import partial
 from model import LSTMLanguageModel
 from runner import Runner
 
+# Parse arguments.
+parser = argparse.ArgumentParser('Pytorch LSTM Language Model')
+parser.add_argument('--mode', type=str, choices=['train', 'generate'], default='train')
+args = parser.parse_args()
+
 # Datasets.
 training_data = tt.datasets.IMDB(root='data', split='train')
 test_data = tt.datasets.IMDB(root='data', split='test')
 
 # Preprocessing.
 tokenizer = get_tokenizer()
-vocab = get_vocab(training_data, tokenizer)
+vocab = get_vocab(tokenizer)
 text_preprocessing = partial(text_pipeline, tokenizer=tokenizer, vocab=vocab)
 dataset_map = lambda y,x: text_preprocessing(x)
 training_data = ProcessedIterableDataset(training_data, dataset_map)
@@ -27,11 +33,11 @@ device = "cuda" if tc.cuda.is_available() else "cpu"
 print("Using {} device".format(device))
 
 # Model.
-model = LSTMLanguageModel(emb_dim=350, hidden_dim=350, vocab_size=len(vocab.stoi)).to(device)
+model = LSTMLanguageModel(emb_dim=128, hidden_dim=128, vocab_size=len(vocab.stoi)).to(device)
 print(model)
 
-criterion = tc.nn.CrossEntropyLoss()
-optimizer = tc.optim.AdamW(model.parameters(), lr=0.001, weight_decay=0.0001)
+criterion = tc.nn.NLLLoss()
+optimizer = tc.optim.SGD(model.parameters(), lr=0.1, weight_decay=0.0001)
 
 try:
     model.load_state_dict(tc.load("model.pth"))
@@ -41,15 +47,16 @@ except Exception:
     print('no checkpoint found. training from scratch...')
 
 # Runner.
-runner = Runner(max_epochs=1, verbose=True)
-runner.run(model, train_dataloader, test_dataloader, device, criterion, optimizer)
-print("All done!")
+runner = Runner(verbose=True)
+train_epochs = 10
+generate_lines = 10
 
-# Demo.
-model.eval()
-hypothetical_review = "The movie was good, but there were some over the top moments especially in the action scenes. Overall B+."
-x = tc.from_numpy(text_preprocessing(hypothetical_review))
-y_logits = model.forward(tc.unsqueeze(x, dim=0), len(x))
-y_probs = tc.nn.Softmax(dim=-1)(y_logits)
-print(hypothetical_review)
-print(y_probs)
+
+if args.mode == 'train':
+    runner.train(train_epochs, model, train_dataloader, test_dataloader, device, criterion, optimizer)
+elif args.mode == 'generate':
+    runner.generate(generate_lines)
+else:
+    raise NotImplementedError
+
+

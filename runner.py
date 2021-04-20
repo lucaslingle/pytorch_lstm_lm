@@ -21,7 +21,7 @@ class Runner:
             loss.backward()
             optimizer.step()
 
-            if self.verbose: # and batch_idx % 100 == 0:
+            if self.verbose and batch_idx % 100 == 0:
                 loss = loss.item()
                 print("batch: {}... loss: {}".format(batch_idx, loss))
 

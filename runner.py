@@ -1,4 +1,5 @@
 import torch as tc
+from utils import get_dataloaders
 
 
 class Runner:
@@ -29,8 +30,8 @@ class Runner:
     # this needs to be fixed up further to deal with
     # the fact that the padding should not be counted in the loss/other metrics.
     def evaluate_epoch(self, model, dataloader, device, criterion):
-        num_test_tokens = 0
-        test_loss, correct = 0, 0
+        num_test_tokens = 1.0e-6
+        test_loss, correct = 0., 0.
         with tc.no_grad():
             for X, Y, L in dataloader:
                 X, Y, L = X.to(device), Y.to(device), L.to(device)
@@ -49,10 +50,12 @@ class Runner:
             "loss": test_loss
         }
 
-    def train(self, epochs, model, train_dataloader, test_dataloader, device, criterion, optimizer):
+    def train(self, dataset_map_fn, batch_size, epochs, model, device, criterion, optimizer):
         for epoch in range(1, epochs+1):
             if self.verbose:
                 print(f"Epoch {epoch}\n-------------------------------")
+
+            train_dataloader, test_dataloader = get_dataloaders(dataset_map_fn=dataset_map_fn, batch_size=batch_size)
 
             model.train() # turn batchnorm, dropout, etc. to train mode.
             self.train_epoch(model, train_dataloader, optimizer, device, criterion)
@@ -68,5 +71,5 @@ class Runner:
                 tc.save(model.state_dict(), "model.pth")
                 tc.save(optimizer.state_dict(), "optimizer.pth")
 
-    def generate(self, generate_lines):
+    def generate(self):
         raise NotImplementedError

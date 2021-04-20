@@ -2,11 +2,14 @@ import torch as tc
 import torchtext as tt
 import numpy as np
 from collections import Counter
+from functools import partial
 from torch.nn.utils.rnn import pad_sequence
+
 
 def get_tokenizer():
     tokenizer = tt.data.utils.get_tokenizer('basic_english')
     return tokenizer
+
 
 def get_vocab(tokenizer):
     # https://pytorch.org/text/stable/vocab.html
@@ -19,9 +22,11 @@ def get_vocab(tokenizer):
     vocab = tt.vocab.Vocab(counter, specials=('<unk>', '<pad>', '<go>'), min_freq=50)
     return vocab
 
+
 def text_pipeline(text, tokenizer, vocab):
     sequence = [vocab.stoi[token] for token in tokenizer(text)]
     return sequence
+
 
 def lstm_preprocess_pipeline(sequences, max_tokens=20):
     batch_size = len(sequences)
@@ -41,13 +46,24 @@ def lstm_preprocess_pipeline(sequences, max_tokens=20):
     return input_tokens, target_tokens, lengths
 
 
-class ProcessedIterableDataset(tc.utils.data.IterableDataset):
-    # This is cleaner than using collate_fn in the dataloader.
-    # Investigation shows it is faster, as well.
-    # It also lets you shuffle the data, which the dataloader itself does not support for IterableDatasets.
-    def __init__(self, dataset, function):
-        self.dataset = tc.utils.data.BufferedShuffleDataset(dataset, buffer_size=25000)
-        self.function = function
+def collate_batch(batch, dataset_map_fn, batch_map_fn):
+    sequences = [dataset_map_fn(y,x) for y,x in batch]
+    X, Y, L = batch_map_fn(sequences)
+    # ^ note this differs from other projects since we use the entire batch to choose pad length;
+    # this is inherently a non-local computation and cannot be done as fixed per-element map.
+    return X, Y, L
 
-    def __iter__(self):
-        return (self.function(x,y) for x,y in self.dataset.__iter__())
+
+def get_dataloaders(dataset_map_fn, batch_size):
+    training_data = tt.datasets.IMDB(root='data', split='train')
+    test_data = tt.datasets.IMDB(root='data', split='test')
+
+    training_data = tc.utils.data.BufferedShuffleDataset(training_data, buffer_size=25000)
+    test_data = tc.utils.data.BufferedShuffleDataset(test_data, buffer_size=25000)
+
+    collate_fn = partial(collate_batch, dataset_map_fn=dataset_map_fn, batch_map_fn=lstm_preprocess_pipeline)
+
+    train_dataloader = tc.utils.data.DataLoader(training_data, batch_size=batch_size, collate_fn=collate_fn)
+    test_dataloader = tc.utils.data.DataLoader(test_data, batch_size=batch_size, collate_fn=collate_fn)
+
+    return train_dataloader, test_dataloader

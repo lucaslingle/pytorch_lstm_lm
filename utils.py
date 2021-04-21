@@ -67,3 +67,12 @@ def get_dataloaders(dataset_map_fn, batch_size):
     test_dataloader = tc.utils.data.DataLoader(test_data, batch_size=batch_size, collate_fn=collate_fn)
 
     return train_dataloader, test_dataloader
+
+
+def get_mask(lengths, sequence_len):
+    batch_size = lengths.shape[0]
+    bool_mask = tc.le(
+        tc.arange(sequence_len).expand(batch_size, sequence_len),
+        lengths.unsqueeze(dim=1).expand(batch_size, sequence_len)
+    )
+    return bool_mask.float()

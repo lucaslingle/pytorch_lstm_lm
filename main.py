@@ -23,9 +23,6 @@ print("Using {} device".format(device))
 
 # Model.
 model = LSTMLanguageModel(emb_dim=128, hidden_dim=128, vocab_size=len(vocab.stoi)).to(device)
-print(model)
-
-criterion = tc.nn.NLLLoss()
 optimizer = tc.optim.SGD(model.parameters(), lr=0.1, weight_decay=0.0001)
 
 try:
@@ -39,9 +36,8 @@ except Exception:
 runner = Runner(verbose=True)
 epochs = 10
 
-
 if args.mode == 'train':
-    runner.train(dataset_map_fn, batch_size, epochs, model, device, criterion, optimizer)
+    runner.train(dataset_map_fn, batch_size, epochs, model, device, optimizer)
 elif args.mode == 'generate':
     runner.generate()
 else:

@@ -95,7 +95,7 @@ class Runner:
 
         lines = [' '.join([vocab.itos[x] for x in line]) for line in tokens.numpy()]
 
-        with open(fp, 'w+') as f:
+        with open(fp, 'a+') as f:
             for line in lines:
                 f.write(line + '\n')
 

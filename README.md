@@ -12,5 +12,5 @@ After training, you can sample from the model by running
 python main.py --mode=generate
 ```
 
-The samples will be written to a file ``samples.txt```. In this git repo, samples from a pretrained LSTM are provided in this file.
+The samples will be written to a file ```samples.txt```. In this git repo, samples from a pretrained LSTM are provided in this file.
 After you clone the repo, delete the file to start from scratch. 

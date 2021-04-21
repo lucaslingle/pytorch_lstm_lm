@@ -23,7 +23,7 @@ class LSTMLanguageModel(tc.nn.Module):
 
         :param padded_sequences: Tensor of batch-major int sequences, padded to the len of the longest in batch, plus 1.
         :param lengths: Lengths of each unpadded sequence, plus 1.
-        :param initial_state: Optional initial state for carrying state across forward calls.
+        :param state: Optional argument for carrying state across forward calls.
         :return: Tuple containing the token logits in batch-major format, as well as the final state.
         """
         embedded = self.embeddings(padded_sequences)
@@ -42,6 +42,3 @@ class LSTMLanguageModel(tc.nn.Module):
         logprobs = tc.nn.LogSoftmax(dim=-1)(logits)
         logprobs = logprobs.view(batch_size, seq_len, self.vocab_size)
         return logprobs, final_state
-
-    def generate_token(self, prefixes):
-        raise NotImplementedError

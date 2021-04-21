@@ -28,9 +28,9 @@ optimizer = tc.optim.SGD(model.parameters(), lr=0.1, weight_decay=0.0001)
 try:
     model.load_state_dict(tc.load("model.pth"))
     optimizer.load_state_dict(tc.load("optimizer.pth"))
-    print('successfully reloaded checkpoint. continuing training...')
+    print('successfully reloaded checkpoint.')
 except Exception:
-    print('no checkpoint found. training from scratch...')
+    print('no checkpoint found.')
 
 # Runner.
 runner = Runner(verbose=True)

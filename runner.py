@@ -29,8 +29,6 @@ class Runner:
 
         return
 
-    # this needs to be fixed up further to deal with
-    # the fact that the padding should not be counted in the loss/other metrics.
     def evaluate_epoch(self, model, dataloader, device):
         num_test_tokens = 0
         test_loss, correct = 0, 0

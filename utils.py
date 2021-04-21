@@ -71,7 +71,7 @@ def get_dataloaders(dataset_map_fn, batch_size):
 
 def get_mask(lengths, sequence_len):
     batch_size = lengths.shape[0]
-    bool_mask = tc.le(
+    bool_mask = tc.less(
         tc.arange(sequence_len).expand(batch_size, sequence_len),
         lengths.unsqueeze(dim=1).expand(batch_size, sequence_len)
     )

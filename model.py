@@ -18,7 +18,7 @@ class LSTMLanguageModel(tc.nn.Module):
         c = tc.zeros(dtype=tc.float32, size=(1, batch_size, self.hidden_dim)) # one layer lstm; layer idx 1st for state
         return (h, c)
 
-    def forward(self, padded_sequences, lengths, initial_state=None):
+    def forward(self, padded_sequences, lengths, state=None):
         """Process token sequences using the LSTM, and return sequences of token logits and the final state.
 
         :param padded_sequences: Tensor of batch-major int sequences, padded to the len of the longest in batch, plus 1.
@@ -30,7 +30,7 @@ class LSTMLanguageModel(tc.nn.Module):
         packed_input = pack_padded_sequence(embedded, lengths, batch_first=True, enforce_sorted=False)
 
         batch_size, seq_len = padded_sequences.size()
-        initial_state = initial_state if (initial_state is not None) else self.initial_state(batch_size)
+        initial_state = state if (state is not None) else self.initial_state(batch_size)
 
         hiddens, final_state = self.lstm(packed_input, initial_state)
         hiddens, _ = pad_packed_sequence(hiddens, batch_first=True, padding_value=0.0)
@@ -42,3 +42,6 @@ class LSTMLanguageModel(tc.nn.Module):
         logprobs = tc.nn.LogSoftmax(dim=-1)(logits)
         logprobs = logprobs.view(batch_size, seq_len, self.vocab_size)
         return logprobs, final_state
+
+    def generate_token(self, prefixes):
+        raise NotImplementedError

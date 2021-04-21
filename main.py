@@ -39,7 +39,7 @@ epochs = 10
 if args.mode == 'train':
     runner.train(dataset_map_fn, batch_size, epochs, model, device, optimizer)
 elif args.mode == 'generate':
-    runner.generate()
+    runner.generate(vocab, batch_size, model, 'samples.txt')
 else:
     raise NotImplementedError
 

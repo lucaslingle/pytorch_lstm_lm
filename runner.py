@@ -74,5 +74,32 @@ class Runner:
                 tc.save(model.state_dict(), "model.pth")
                 tc.save(optimizer.state_dict(), "optimizer.pth")
 
-    def generate(self):
-        raise NotImplementedError
+    def generate(self, vocab, batch_size, model, fp, max_tokens=20):
+        go_tokens = vocab.stoi['<go>'] * tc.ones((batch_size, 1)).long()
+        tokens = go_tokens
+
+        model.eval()
+
+        with tc.no_grad():
+            state = model.initial_state(batch_size)
+            x_tm1 = go_tokens
+
+            for t in range(1, max_tokens+2):
+                # generate tokens x_1, ..., x_{max_tokens}, x_{max_tokens+1}.
+                # after training model, the last token should be a '<pad>' token, which serves as eos.
+                logprobs, state = model.forward(x_tm1, lengths=tc.ones((batch_size,)), state=state)
+                probs = tc.nn.Softmax(dim=-1)(logprobs.squeeze(dim=1))
+                x_t = tc.multinomial(probs, num_samples=1)
+                tokens = tc.cat((tokens, x_t), dim=-1)
+                x_tm1 = x_t
+
+        lines = [' '.join([vocab.itos[x] for x in line]) for line in tokens.numpy()]
+
+        with open(fp, 'w+') as f:
+            for line in lines:
+                f.write(line + '\n')
+
+        return
+
+
+
